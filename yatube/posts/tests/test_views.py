@@ -246,6 +246,7 @@ class PaginatorViewsTests(TestCase):
             for i in range(1, 14)
         ]
         Post.objects.bulk_create(self.posts)
+        cache.clear()
 
     def test_profile_and_group_paginator(self):
         """Проверка паджинатора страниц профиля и группы."""
