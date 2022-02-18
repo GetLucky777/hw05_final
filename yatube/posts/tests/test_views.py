@@ -54,6 +54,7 @@ class ViewsAndContextTests(TestCase):
             image=self.uploaded_image
         )
         self.post_id = Post.objects.last().id
+        cache.clear()
 
     @classmethod
     def tearDownClass(cls):

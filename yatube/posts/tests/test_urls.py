@@ -2,6 +2,7 @@ from http import HTTPStatus
 
 from django.test import TestCase, Client
 from django.urls import reverse
+from django.core.cache import cache
 
 from posts.models import Group, Post, User
 
@@ -27,6 +28,7 @@ class StaticURLTests(TestCase):
         self.user = User.objects.create(username='TestUser')
         self.authorized_user = Client()
         self.authorized_user.force_login(self.user)
+        cache.clear()
 
     def test_correct_templates(self):
         """Проверка соответсвия URL и шаблонов."""

@@ -5,6 +5,7 @@ from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
+from django.core.cache import cache
 
 from posts.models import Group, Post, User
 
@@ -49,6 +50,7 @@ class FormsTests(TestCase):
             'group': self.group.pk,
             'image': self.uploaded_image
         }
+        cache.clear()
 
     @classmethod
     def tearDownClass(cls):

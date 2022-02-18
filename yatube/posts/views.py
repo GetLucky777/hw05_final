@@ -1,20 +1,23 @@
 from django.shortcuts import get_object_or_404, render, redirect
 from django.core.paginator import Paginator
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.cache import cache_page
 
 from .forms import PostForm, CommentForm
-from .models import Group, Post, User, Comment
+from .models import Group, Post, User, Comment, Follow
 
 TEXT_PREVIEW_SYMBOLS = 30
 POSTS_PER_PAGE = 10
 
 
+@cache_page(20, key_prefix='index_page')
 def index(request):
     post_list = Post.objects.all()
     paginator = Paginator(post_list, POSTS_PER_PAGE)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     context = {
+        'title': 'Последние обновления на сайте',
         'page_obj': page_obj,
     }
     return render(request, 'posts/index.html', context)
@@ -27,6 +30,7 @@ def group_posts(request, slug):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     context = {
+        'title': f'Последние обновления в группе {group.title}',
         'group': group,
         'page_obj': page_obj
     }
@@ -40,12 +44,20 @@ def profile(request, username):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     post_amount = user_posts.count()
+    if request.user.is_authenticated:
+        following = Follow.objects.filter(
+            user=request.user,
+            author=user
+        ).exists()
+    else:
+        following = False
     context = {
         'title': f'Профайл пользователя {user.first_name} {user.last_name}',
         'author': user,
         'user_posts': user_posts,
         'post_amount': post_amount,
-        'page_obj': page_obj
+        'page_obj': page_obj,
+        'following': following
     }
     return render(request, 'posts/profile.html', context)
 
@@ -90,7 +102,7 @@ def post_edit(request, post_id):
 
 def post_detail(request, post_id):
     post = get_object_or_404(Post, id=post_id)
-    post_amount = Post.objects.all().count()
+    post_amount = Post.objects.all().filter(author=post.author).count()
     comments = Comment.objects.filter(post=post)
     comment_form = PostForm(
         request.POST or None
@@ -116,3 +128,37 @@ def add_comment(request, post_id):
         comment.post = post
         comment.save()
     return redirect('posts:post_detail', post_id=post_id)
+
+
+@login_required
+def follow_index(request):
+    user_follows = Follow.objects.filter(user=request.user)
+    post_list = Post.objects.filter(
+        author__in=[follow.author for follow in user_follows]
+    )
+    paginator = Paginator(post_list, POSTS_PER_PAGE)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    context = {
+        'title': 'Последние обновления от авторов, на которых вы подписаны',
+        'page_obj': page_obj,
+    }
+    return render(request, 'posts/follow.html', context)
+
+
+@login_required
+def profile_follow(request, username):
+    Follow.objects.create(
+        user=request.user,
+        author=get_object_or_404(User, username=username)
+    )
+    return redirect('posts:profile', username=username)
+
+
+@login_required
+def profile_unfollow(request, username):
+    Follow.objects.get(
+        user=request.user,
+        author=get_object_or_404(User, username=username)
+    ).delete()
+    return redirect('posts:profile', username=username)
