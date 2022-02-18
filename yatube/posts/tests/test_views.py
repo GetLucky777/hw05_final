@@ -44,9 +44,15 @@ class ViewsAndContextTests(TestCase):
             content_type='image/gif'
         )
         self.guest_client = Client()
+        self.author = User.objects.create(username='author')
+        self.authorized_author = Client()
+        self.authorized_author.force_login(self.author)
+        self.follower = User.objects.create(username='follower')
+        self.authorized_follower = Client()
+        self.authorized_follower.force_login(self.follower)
         self.user = User.objects.create(username='TestUser')
-        self.authorized_client = Client()
-        self.authorized_client.force_login(self.user)
+        self.authorized_user = Client()
+        self.authorized_user.force_login(self.user)
         self.post = Post.objects.create(
             text='Тестовое содержимое поста',
             author=self.user,
@@ -81,18 +87,18 @@ class ViewsAndContextTests(TestCase):
         }
         for view, template in view_template_names.items():
             with self.subTest(view=view):
-                response = self.authorized_client.get(view)
+                response = self.authorized_user.get(view)
                 self.assertTemplateUsed(response, template)
 
     def test_main_page_have_correct_context(self):
         """Проверка словаря контекста главной страницы."""
-        response = self.authorized_client.get(reverse('posts:index'))
+        response = self.authorized_user.get(reverse('posts:index'))
         first_object = response.context['page_obj'][0]
         self.assertEqual(first_object, self.post)
 
     def test_group_list_have_correct_context(self):
         """Проверка словаря контекста страницы группы."""
-        response = self.authorized_client.get(
+        response = self.authorized_user.get(
             reverse('posts:group_list', kwargs={'slug': 'test-slug'}))
         first_object = response.context['page_obj'][0]
         self.assertEqual(response.context['group'], self.group)
@@ -100,7 +106,7 @@ class ViewsAndContextTests(TestCase):
 
     def test_profile_have_correct_context(self):
         """Проверка словаря контекста профиля юзера."""
-        response = self.authorized_client.get(
+        response = self.authorized_user.get(
             reverse('posts:profile', kwargs={'username': 'TestUser'}))
         first_object = response.context['page_obj'][0]
         self.assertEqual(first_object, self.post)
@@ -116,7 +122,7 @@ class ViewsAndContextTests(TestCase):
 
     def test_post_detail_have_correct_context(self):
         """Проверка словаря контекста страницы поста."""
-        response = self.authorized_client.get(
+        response = self.authorized_user.get(
             reverse('posts:post_detail', kwargs={'post_id': self.post_id}))
         self.assertEqual(response.context.get('title'),
                          'Тестовое содержимое поста')
@@ -127,7 +133,7 @@ class ViewsAndContextTests(TestCase):
 
     def test_edit_post_have_correct_context(self):
         """Проверка словаря контекста страницы редактирования поста."""
-        response = self.authorized_client.get(
+        response = self.authorized_user.get(
             reverse('posts:post_edit', kwargs={'post_id': self.post_id}))
         form_fields = {
             'text': forms.fields.CharField,
@@ -146,7 +152,7 @@ class ViewsAndContextTests(TestCase):
 
     def test_create_post_have_correct_context(self):
         """Проверка словаря контекста страницы создания поста."""
-        response = self.authorized_client.get(reverse('posts:post_create'))
+        response = self.authorized_user.get(reverse('posts:post_create'))
         form_fields = {
             'text': forms.fields.CharField,
             'group': forms.fields.ChoiceField
@@ -171,13 +177,13 @@ class ViewsAndContextTests(TestCase):
         comment_form = {
             'text': 'Текст комментария'
         }
-        self.authorized_client.post(
+        self.authorized_user.post(
             reverse('posts:add_comment', kwargs={'post_id': self.post_id}),
             data=comment_form,
             follow=True
         )
         self.assertEqual(commented_post.comments.count(), 1)
-        response = self.authorized_client.get(
+        response = self.authorized_user.get(
             reverse('posts:add_comment', kwargs={'post_id': self.post_id}),
             follow=True
         )
@@ -189,15 +195,32 @@ class ViewsAndContextTests(TestCase):
     def test_index_cache(self):
         """Проверка работы кеша"""
         cache.clear()
-        response = self.authorized_client.get(reverse('posts:index'))
+        response = self.authorized_user.get(reverse('posts:index'))
         new_cache = response.content
         post = Post.objects.get(pk=1)
         post.delete()
-        response = self.authorized_client.get(reverse('posts:index'))
+        response = self.authorized_user.get(reverse('posts:index'))
         self.assertEqual(response.content, new_cache)
         cache.clear()
-        response = self.authorized_client.get(reverse('posts:index'))
+        response = self.authorized_user.get(reverse('posts:index'))
         self.assertNotEqual(response.content, new_cache)
+
+    def test_post_show_in_follow_index_and_dont_in_unfollow(self):
+        """Проверка, что новая запись автора появляется только у подпичиков."""
+        self.authorized_follower.get(
+            reverse('posts:profile_follow', kwargs={'username': 'author'})
+        )
+        self.post = Post.objects.create(
+            text='Новый пост для моих подписчиков',
+            author=self.author,
+            group=self.group,
+        )
+        response = self.authorized_follower.get(reverse('posts:follow_index'))
+        first_object = response.context['page_obj'][0]
+        self.assertEqual(first_object, self.post)
+        response = self.authorized_user.get(reverse('posts:follow_index'))
+        first_object = response.context['page_obj']
+        self.assertEqual(len(first_object), 0)
 
 
 class PaginatorViewsTests(TestCase):
