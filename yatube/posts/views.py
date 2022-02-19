@@ -49,6 +49,8 @@ def profile(request, username):
             user=request.user,
             author=user
         ).exists()
+    else:
+        following = False
     context = {
         'title': f'Профайл пользователя {user.first_name} {user.last_name}',
         'author': user,
