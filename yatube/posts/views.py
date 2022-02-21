@@ -44,13 +44,10 @@ def profile(request, username):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     post_amount = user_posts.count()
-    if request.user.is_authenticated:
-        following = Follow.objects.filter(
-            user=request.user,
-            author=user
-        ).exists()
-    else:
-        following = False
+    following = request.user.is_authenticated and Follow.objects.filter(
+        user=request.user,
+        author=user
+    ).exists()
     context = {
         'title': f'Профайл пользователя {user.first_name} {user.last_name}',
         'author': user,
