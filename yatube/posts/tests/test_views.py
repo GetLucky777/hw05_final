@@ -8,7 +8,7 @@ from django.conf import settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django import forms
 
-from posts.models import Group, Post, User, Comment
+from posts.models import Group, Post, User, Comment, Follow
 from posts.forms import PostForm
 
 
@@ -95,6 +95,9 @@ class ViewsAndContextTests(TestCase):
         response = self.authorized_user.get(reverse('posts:index'))
         first_object = response.context['page_obj'][0]
         self.assertEqual(first_object, self.post)
+        self.assertEqual(first_object.group, self.post.group)
+        self.assertEqual(first_object.author, self.post.author)
+        self.assertEqual(first_object.image, self.post.image)
 
     def test_group_list_have_correct_context(self):
         """Проверка словаря контекста страницы группы."""
@@ -103,6 +106,9 @@ class ViewsAndContextTests(TestCase):
         first_object = response.context['page_obj'][0]
         self.assertEqual(response.context['group'], self.group)
         self.assertEqual(first_object, self.post)
+        self.assertEqual(first_object.group, self.post.group)
+        self.assertEqual(first_object.author, self.post.author)
+        self.assertEqual(first_object.image, self.post.image)
 
     def test_profile_have_correct_context(self):
         """Проверка словаря контекста профиля юзера."""
@@ -110,6 +116,9 @@ class ViewsAndContextTests(TestCase):
             reverse('posts:profile', kwargs={'username': 'TestUser'}))
         first_object = response.context['page_obj'][0]
         self.assertEqual(first_object, self.post)
+        self.assertEqual(first_object.group, self.post.group)
+        self.assertEqual(first_object.author, self.post.author)
+        self.assertEqual(first_object.image, self.post.image)
         self.assertEqual(response.context.get('title'),
                          f'Профайл пользователя '
                          f'{self.user.first_name} {self.user.last_name}')
@@ -128,6 +137,9 @@ class ViewsAndContextTests(TestCase):
                          'Тестовое содержимое поста')
         self.assertEqual(response.context.get('post'),
                          self.post)
+        self.assertEqual(response.context.get('post').group, self.post.group)
+        self.assertEqual(response.context.get('post').author, self.post.author)
+        self.assertEqual(response.context.get('post').image, self.post.image)
         self.assertEqual(response.context.get('post_amount'),
                          self.user.posts.all().count())
 
@@ -204,6 +216,18 @@ class ViewsAndContextTests(TestCase):
         cache.clear()
         response = self.authorized_user.get(reverse('posts:index'))
         self.assertNotEqual(response.content, new_cache)
+
+    def test_add_delete_follow(self):
+        """Проверка возможности подписки/отписки авториз. юзером."""
+        self.assertEqual(Follow.objects.all().count(), 0)
+        self.authorized_user.get(
+            reverse('posts:profile_follow', kwargs={'username': 'author'})
+        )
+        self.assertEqual(Follow.objects.all().count(), 1)
+        self.authorized_user.get(
+            reverse('posts:profile_unfollow', kwargs={'username': 'author'})
+        )
+        self.assertEqual(Follow.objects.all().count(), 0)
 
     def test_post_show_in_follow_index_and_dont_in_unfollow(self):
         """Проверка, что новая запись автора появляется только у подпичиков."""

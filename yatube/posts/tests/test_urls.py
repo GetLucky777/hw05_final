@@ -4,7 +4,7 @@ from django.test import TestCase, Client
 from django.urls import reverse
 from django.core.cache import cache
 
-from posts.models import Group, Post, User, Follow
+from posts.models import Group, Post, User
 
 
 class StaticURLTests(TestCase):
@@ -96,20 +96,3 @@ class StaticURLTests(TestCase):
             with self.subTest(url=url):
                 response = self.guest_client.get(url, follow=True)
                 self.assertRedirects(response, redirect_url)
-
-    def test_add_delete_follow(self):
-        """Проверка возможности подписки/отписки авториз. юзером."""
-        self.assertEqual(Follow.objects.all().count(), 0)
-        self.authorized_user.get(
-            reverse('posts:profile_follow', kwargs={'username': 'author'})
-        )
-        self.assertEqual(Follow.objects.all().count(), 1)
-        self.authorized_user.get(
-            reverse('posts:profile_unfollow', kwargs={'username': 'author'})
-        )
-        self.assertEqual(Follow.objects.all().count(), 0)
-
-    def test_unknown_url(self):
-        """Проверка открытия несуществующей страницы."""
-        response = self.guest_client.get('/unexisting_page/')
-        self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND.value)
