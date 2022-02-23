@@ -47,7 +47,7 @@ class PostModelTest(TestCase):
                     str(object), expected_value
                 )
 
-    def test_text_label(self):
+    def test_models_verbose_name(self):
         """Проверяем, что verbose_name полей совпадает с ожидаемым."""
         post = PostModelTest.post
         group = PostModelTest.group
@@ -75,7 +75,7 @@ class PostModelTest(TestCase):
                     verbose_name[0]
                 )
 
-    def test_group_help_text(self):
+    def test_models_help_text(self):
         """Проверяем, что help_text полей совпадает с ожидаемым."""
         post = PostModelTest.post
         group = PostModelTest.group

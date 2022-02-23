@@ -94,54 +94,67 @@ class ViewsAndContextTests(TestCase):
         """Проверка словаря контекста главной страницы."""
         response = self.authorized_user.get(reverse('posts:index'))
         first_object = response.context['page_obj'][0]
-        self.assertEqual(first_object, self.post)
-        self.assertEqual(first_object.group, self.post.group)
-        self.assertEqual(first_object.author, self.post.author)
-        self.assertEqual(first_object.image, self.post.image)
+        index_context_dictionary = {
+            first_object: self.post,
+            first_object.group: self.post.group,
+            first_object.author: self.post.author,
+            first_object.image: self.post.image
+        }
+        for context_obj, post_attribute in index_context_dictionary.items():
+            with self.subTest(context_obj=context_obj):
+                self.assertEqual(context_obj, post_attribute)
 
     def test_group_list_have_correct_context(self):
         """Проверка словаря контекста страницы группы."""
         response = self.authorized_user.get(
             reverse('posts:group_list', kwargs={'slug': 'test-slug'}))
         first_object = response.context['page_obj'][0]
-        self.assertEqual(response.context['group'], self.group)
-        self.assertEqual(first_object, self.post)
-        self.assertEqual(first_object.group, self.post.group)
-        self.assertEqual(first_object.author, self.post.author)
-        self.assertEqual(first_object.image, self.post.image)
+        index_context_dictionary = {
+            response.context['group']: self.group,
+            first_object: self.post,
+            first_object.group: self.post.group,
+            first_object.author: self.post.author,
+            first_object.image: self.post.image
+        }
+        for context_obj, post_attribute in index_context_dictionary.items():
+            with self.subTest(context_obj=context_obj):
+                self.assertEqual(context_obj, post_attribute)
 
     def test_profile_have_correct_context(self):
         """Проверка словаря контекста профиля юзера."""
         response = self.authorized_user.get(
             reverse('posts:profile', kwargs={'username': 'TestUser'}))
         first_object = response.context['page_obj'][0]
-        self.assertEqual(first_object, self.post)
-        self.assertEqual(first_object.group, self.post.group)
-        self.assertEqual(first_object.author, self.post.author)
-        self.assertEqual(first_object.image, self.post.image)
-        self.assertEqual(response.context.get('title'),
-                         f'Профайл пользователя '
-                         f'{self.user.first_name} {self.user.last_name}')
-        self.assertEqual(response.context.get('author'),
-                         self.user)
-        self.assertEqual(response.context.get('user_posts')[0],
-                         self.user.posts.all()[0])
-        self.assertEqual(response.context.get('post_amount'),
-                         self.user.posts.all().count())
+        index_context_dictionary = {
+            response.context.get('title'): f'Профайл пользователя '
+            f'{self.user.first_name} {self.user.last_name}',
+            response.context.get('author'): self.user,
+            response.context.get('user_posts')[0]: self.user.posts.all()[0],
+            response.context.get('post_amount'): self.user.posts.all().count(),
+            first_object: self.post,
+            first_object.group: self.post.group,
+            first_object.author: self.post.author,
+            first_object.image: self.post.image
+        }
+        for context_obj, post_attribute in index_context_dictionary.items():
+            with self.subTest(context_obj=context_obj):
+                self.assertEqual(context_obj, post_attribute)
 
     def test_post_detail_have_correct_context(self):
         """Проверка словаря контекста страницы поста."""
         response = self.authorized_user.get(
             reverse('posts:post_detail', kwargs={'post_id': self.post_id}))
-        self.assertEqual(response.context.get('title'),
-                         'Тестовое содержимое поста')
-        self.assertEqual(response.context.get('post'),
-                         self.post)
-        self.assertEqual(response.context.get('post').group, self.post.group)
-        self.assertEqual(response.context.get('post').author, self.post.author)
-        self.assertEqual(response.context.get('post').image, self.post.image)
-        self.assertEqual(response.context.get('post_amount'),
-                         self.user.posts.all().count())
+        index_context_dictionary = {
+            response.context.get('title'): 'Тестовое содержимое поста',
+            response.context.get('post'): self.post,
+            response.context.get('post').group: self.post.group,
+            response.context.get('post').author: self.post.author,
+            response.context.get('post').image: self.post.image,
+            response.context.get('post_amount'): self.user.posts.all().count()
+        }
+        for context_obj, post_attribute in index_context_dictionary.items():
+            with self.subTest(context_obj=context_obj):
+                self.assertEqual(context_obj, post_attribute)
 
     def test_edit_post_have_correct_context(self):
         """Проверка словаря контекста страницы редактирования поста."""
@@ -217,8 +230,16 @@ class ViewsAndContextTests(TestCase):
         response = self.authorized_user.get(reverse('posts:index'))
         self.assertNotEqual(response.content, new_cache)
 
-    def test_add_delete_follow(self):
-        """Проверка возможности подписки/отписки авториз. юзером."""
+    def test_add_follow(self):
+        """Проверка возможности подписки авториз. юзером."""
+        self.assertEqual(Follow.objects.all().count(), 0)
+        self.authorized_user.get(
+            reverse('posts:profile_follow', kwargs={'username': 'author'})
+        )
+        self.assertEqual(Follow.objects.all().count(), 1)
+
+    def test_delete_follow(self):
+        """Проверка возможности отписки авториз. юзером."""
         self.assertEqual(Follow.objects.all().count(), 0)
         self.authorized_user.get(
             reverse('posts:profile_follow', kwargs={'username': 'author'})
@@ -229,7 +250,7 @@ class ViewsAndContextTests(TestCase):
         )
         self.assertEqual(Follow.objects.all().count(), 0)
 
-    def test_post_show_in_follow_index_and_dont_in_unfollow(self):
+    def test_post_show_in_follow_index(self):
         """Проверка, что новая запись автора появляется только у подпичиков."""
         self.authorized_follower.get(
             reverse('posts:profile_follow', kwargs={'username': 'author'})
@@ -242,6 +263,20 @@ class ViewsAndContextTests(TestCase):
         response = self.authorized_follower.get(reverse('posts:follow_index'))
         first_object = response.context['page_obj'][0]
         self.assertEqual(first_object, self.post)
+
+    def test_post_dont_show_in_unfollow_index(self):
+        """Проверка, что новая запись автора не появляется у неподписанных."""
+        self.assertFalse(Follow.objects.filter(
+            user=self.user,
+            author=self.author).exists())
+        response = self.authorized_user.get(reverse('posts:follow_index'))
+        first_object = response.context['page_obj']
+        self.assertEqual(len(first_object), 0)
+        self.post = Post.objects.create(
+            text='Новый пост для моих подписчиков',
+            author=self.author,
+            group=self.group,
+        )
         response = self.authorized_user.get(reverse('posts:follow_index'))
         first_object = response.context['page_obj']
         self.assertEqual(len(first_object), 0)
