@@ -218,7 +218,7 @@ class ViewsAndContextTests(TestCase):
         )
 
     def test_index_cache(self):
-        """Проверка работы кеша"""
+        """Проверка работы кеша."""
         cache.clear()
         response = self.authorized_user.get(reverse('posts:index'))
         new_cache = response.content
