@@ -1,3 +1,37 @@
-# hw05_final
+## Yatube - Проект сайта социальной сети дневников на Django
 
-[![CI](https://github.com/yandex-praktikum/hw05_final/actions/workflows/python-app.yml/badge.svg?branch=master)](https://github.com/yandex-praktikum/hw05_final/actions/workflows/python-app.yml)
+# Описание проекта
+
+Сервис предназначен для публикации и просмотра публичных дневников с возможнастями отслеживания и комментирования любимых авторов.
+Реализована кастомная лента записей, в которой находят только посты любимых авторов.
+
+# Используемые технологии
+- Python 3.9.10
+- Django 2.2.16
+
+# Запуск проекта
+Клонировать репозиторий, перейти в новую директорию:
+```
+git clone https://github.com/GetLucky777/hw05_final
+```
+Инициализировать виртуальное окружение:
+```
+python -m venv venv
+```
+Активировать виртуальное окружение:
+```
+source venv/Scripts/activate
+```
+Установить зависимости проекта:
+```
+pip install -r requirements.txt
+```
+Выполнить миграции, для этого перейти в директорию с файлом manage.py:
+```
+python manage.py migrate
+```
+Запустить проект:
+```
+python manage.py runserver
+```
+
